@@ -1,6 +1,6 @@
 # Receiver contract
 
-This document defines the intended boundary before the full radio receiver is implemented.
+This document defines the implemented receiver boundary and the remaining health/recovery work.
 
 ## Configuration input
 
@@ -12,15 +12,16 @@ Required:
 - WFB-NG ground-station key path
 - RTP destination host and UDP port
 
-Planned CLI shape:
+Current orchestration command:
 
 ```text
-fpv4mac receive \
-  --device 0bda:8812 \
+scripts/receive.sh \
   --channel 161 \
   --width 20 \
   --key /path/to/gs.key \
-  --output rtp://127.0.0.1:5600
+  --capture captures/bench.fpv4cap \
+  --host 127.0.0.1 \
+  --port 5600
 ```
 
 ## Media output
@@ -28,7 +29,7 @@ fpv4mac receive \
 - Transport: UDP
 - Payload: the reconstructed RTP packets produced by the air unit
 - Codec: H.265 or H.264; no transcoding in `fpv4mac`
-- Destination: explicit IPv4/IPv6 host and port
+- Destination: explicit IPv4 host and port
 - Backpressure: bounded buffering with packet-drop accounting
 
 The receiver will not invent RTP timestamps or alter RTP sequence numbers. Downstream consumers
@@ -36,7 +37,7 @@ can use an SDP file or explicit caps to identify the codec and 90 kHz RTP clock.
 
 ## Health output
 
-Human-readable status is the default. A stable JSON-lines mode will expose at least:
+Capture and WFB completion events are JSON. A future periodic JSON-lines mode will expose at least:
 
 ```json
 {
@@ -53,11 +54,13 @@ Human-readable status is the default. A stable JSON-lines mode will expose at le
 }
 ```
 
-Field names will be versioned before the first stable release.
+The current end-of-session WFB event includes accepted/filtered/malformed frames, decrypt errors,
+FEC recoveries, packet loss, bad packets, and forwarded UDP packet/byte counts. Field names will
+be versioned before the first stable release.
 
 ## Exit behavior
 
 - Invalid configuration fails before the adapter is initialized.
 - Missing or unreadable keys fail closed.
-- Adapter removal changes health state immediately and triggers bounded reconnection attempts.
+- Adapter reconnection is planned but not yet implemented.
 - Shutdown releases claimed USB interfaces and closes output sockets.

@@ -1,5 +1,7 @@
 /build/
 /build-*/
+*.fpv4cap
+*.key
 /.deps/
 /.cache/
 .DS_Store

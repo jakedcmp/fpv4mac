@@ -20,8 +20,9 @@ Results:
 4. The receiver delivered an ambient 802.11 frame before the WiFiLink2 air unit was powered.
 5. Ctrl-C shut the radio down and released the USB interface cleanly.
 
-This validates the Mac-to-USB-to-radio receive path. It does **not** yet validate the WiFiLink2
-transmitter, WFB-NG authentication/FEC recovery, or playable RTP video.
+This validates the Mac-to-USB-to-radio receive path. Deterministic fixtures separately validate
+WFB-NG session authentication, decryption, dropped-fragment FEC recovery, and UDP forwarding. It
+does **not** yet validate the WiFiLink2 transmitter or playable live RTP video.
 
 ## Repeat the raw-radio test
 

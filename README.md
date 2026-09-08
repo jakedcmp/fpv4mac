@@ -2,8 +2,8 @@
 
 Native macOS ground receiver tooling for OpenIPC and WFB-NG video links.
 
-> **Project status:** pre-alpha hardware bring-up. USB discovery and the pinned upstream raw-radio
-> backend are validated on Apple Silicon. Native WFB-NG recovery and RTP forwarding are next.
+> **Project status:** pre-alpha hardware bring-up. USB discovery, raw-radio capture/replay, and a
+> macOS WFB-NG-to-UDP bridge are implemented. Live WiFiLink video validation remains.
 
 ## Purpose
 
@@ -38,6 +38,14 @@ brew install cmake pkgconf libusb
 cmake -S . -B build
 cmake --build build -j
 ctest --test-dir build --output-on-failure
+```
+
+Build the separate GPL WFB-NG receiver helper:
+
+```bash
+brew install libsodium
+scripts/build-wfb-bridge.sh
+ctest --test-dir build-wfb-bridge --output-on-failure
 ```
 
 ## Diagnose a receiver
@@ -75,12 +83,45 @@ This initializes the RTL8812AU and counts raw frames on the selected channel. It
 recover or output video. Stop it before running `doctor`, because exactly one process can own the
 USB receiver.
 
+## Capture and replay
+
+`fpv4mac` consumes the documented `devourer` `rx.frame` JSON stream and stores a compact,
+versioned `.fpv4cap` file:
+
+```bash
+DEVOURER_CHANNEL=161 DEVOURER_STREAM_OUT=1 DEVOURER_RX_AGG_SA=any \
+  .deps/devourer/build-fpv4mac/rxdemo 2>radio.log |
+  build/fpv4mac capture --output bench.fpv4cap
+
+build/fpv4mac inspect --input bench.fpv4cap
+build/fpv4mac replay --input bench.fpv4cap --speed realtime
+```
+
+Capture uses a bounded queue and reports malformed or dropped frames. Replay recreates the same
+machine-readable frame interface, allowing downstream work without attached hardware.
+
+## Live receive pipeline
+
+Once the matching `gs.key` is available:
+
+```bash
+scripts/receive.sh \
+  --key /path/to/gs.key \
+  --capture bench.fpv4cap \
+  --channel 161 \
+  --host 127.0.0.1 \
+  --port 5600
+```
+
+The pipeline always records raw RF frames, authenticates/decrypts WFB-NG, performs its upstream
+FEC recovery, and forwards the reconstructed RTP datagrams unchanged to UDP port 5600.
+
 ## Direction
 
 1. USB readiness probe
 2. `devourer` monitor-mode receive on a configured channel
-3. WFB-NG session authentication, decryption, and FEC recovery
-4. Unmodified RTP forwarding to a configurable UDP destination
+3. Versioned raw-frame capture and deterministic replay
+4. WFB-NG session authentication, decryption, FEC recovery, and UDP forwarding
 5. Link-health JSON output and repeatable packet-capture fixtures
 6. Signed/notarized Apple Silicon releases
 
@@ -91,4 +132,4 @@ See [the architecture](docs/architecture.md), [receiver contract](docs/receiver-
 
 Original `fpv4mac` code is available under the MIT License. Dependencies retain their own
 licenses. In particular, OpenIPC `devourer` is GPL-2.0; redistribution of a combined or linked
-work must satisfy the licenses of every component.
+work must satisfy the licenses of every component. See [licensing boundaries](LICENSES.md).

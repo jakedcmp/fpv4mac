@@ -12,24 +12,25 @@
 - [x] Pin and reproducibly build OpenIPC `devourer`
 - [x] Build and hardware-test only the RTL8812AU/Jaguar1 backend initially
 - [x] Tune channel 161 and observe a raw frame on Apple Silicon
-- [ ] Integrate the backend behind the native receiver-session API
-- [ ] Tune channel and width from explicit configuration
-- [ ] Count raw frames and publish RSSI/link observations
+- [x] Consume the backend's stable JSONL receiver interface
+- [x] Tune channel and width from explicit configuration
+- [x] Preserve raw frames and RSSI/SNR/EVM observations in versioned captures
 - [ ] Handle adapter removal and reconnection
 
 ## Milestone 2 — WFB-NG recovery
 
-- [ ] Parse WFB-NG session and data frames
-- [ ] Load `gs.key` without logging key material
-- [ ] Authenticate/decrypt packets
-- [ ] Recover FEC blocks
-- [ ] Add deterministic capture/replay fixtures
+- [x] Parse WFB-NG session and data frames
+- [x] Load `gs.key` without logging key material
+- [x] Authenticate/decrypt packets through the pinned upstream receiver
+- [x] Recover FEC blocks through the pinned upstream receiver
+- [x] Add deterministic capture/replay and crypto/FEC fixtures
 
 ## Milestone 3 — RTP forwarding
 
-- [ ] Forward reconstructed RTP to configurable UDP destination
+- [x] Forward reconstructed RTP to configurable UDP destination
 - [ ] Detect H.264/H.265 payloads
-- [ ] Publish packet-loss and last-packet-age metrics
+- [x] Publish end-of-session WFB loss/FEC/decrypt and capture-drop metrics
+- [ ] Publish periodic live link-health events
 - [ ] Validate with FFmpeg, GStreamer, and a computer-vision consumer
 
 ## Milestone 4 — distribution

@@ -4,17 +4,19 @@
 
 ```mermaid
 flowchart LR
-    Adapter["USB radio adapter"] --> Driver["devourer userspace driver"]
-    Driver --> Frames["raw 802.11 frames"]
-    Frames --> WFB["WFB-NG receive pipeline"]
-    WFB --> RTP["UDP/RTP output"]
-
-    Driver --> RadioMetrics["RSSI / adapter metrics"]
-    WFB --> LinkMetrics["FEC / decrypt / loss metrics"]
+    Air["WiFiLink 2 air unit"] -->|"WFB-NG / 5 GHz"| Adapter["RTL8812AU USB receiver"]
+    Adapter --> Driver["devourer rxdemo<br/>GPL-2.0 process"]
+    Driver -->|"rx.frame JSONL"| Capture["fpv4mac capture<br/>MIT process"]
+    Capture --> Disk["versioned .fpv4cap"]
+    Capture -->|"live JSONL passthrough"| WFB["fpv4mac-wfb + WFB-NG<br/>GPL-3.0 process"]
+    WFB -->|"unchanged UDP payloads"| RTP["RTP consumer on 127.0.0.1:5600"]
+    RTP --> Consumers["FFmpeg / GStreamer / perception / dashboard gateway"]
 ```
 
-`fpv4mac` owns the USB adapter and radio-link processing. It does not own video decoding or a
-display window. This keeps the receiver reusable by OpenIPC operators and by headless services.
+The three processes are joined with pipes, which provides a stable interface and preserves their
+license boundaries. `devourer` owns the adapter. The MIT command records and replays radio frames.
+The GPL bridge performs WFB-NG authentication, decryption, deduplication, and FEC recovery before
+forwarding the original payload as UDP. No stage decodes or transcodes video.
 
 ## Rules
 
@@ -29,26 +31,20 @@ display window. This keeps the receiver reusable by OpenIPC operators and by hea
 
 ## Dependency direction
 
-The planned receiver layers are:
+The live receiver stages are:
 
 ```text
-CLI/configuration
-      |
-receiver session + metrics
-      |
-WFB-NG recovery
-      |
-OpenIPC devourer
-      |
-libusb
+RTL8812AU -> devourer -> JSONL -> fpv4mac capture -> JSONL -> fpv4mac-wfb -> UDP
 ```
 
-The application layer may depend on the layers below it. Radio and protocol layers must not
-depend on a player, dashboard, computer-vision framework, or drone-control service.
+The boundary after `fpv4mac-wfb` is intentionally ordinary UDP. A local player, dashboard gateway,
+or perception service may listen there without knowing anything about the radio or WFB protocol.
+Those downstream consumers remain outside this repository.
 
 ## Dependency pinning
 
 The bring-up script pins OpenIPC `devourer` to
 `ebe9f9517fb9fab402808c27b0ab6640874207e6`. It builds only the Jaguar1 backend needed by the
 initial RTL8812AU target. This repeatable external build is the first integration seam; the
-receiver-session library will replace the smoke-test executable as its API is stabilized.
+receiver consumes `rxdemo`'s machine-readable stream without linking GPL-2.0 code into the MIT
+binary. WFB-NG is separately pinned by `scripts/build-wfb-bridge.sh`.

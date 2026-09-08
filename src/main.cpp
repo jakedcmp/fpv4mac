@@ -1,3 +1,4 @@
+#include "fpv4mac/capture_commands.hpp"
 #include "fpv4mac/device_catalog.hpp"
 #include "fpv4mac/usb_probe.hpp"
 
@@ -8,7 +9,7 @@
 
 namespace {
 
-constexpr std::string_view version = "0.1.0";
+constexpr std::string_view version = "0.2.0";
 
 std::string json_escape(const std::string& input) {
     std::string output;
@@ -41,6 +42,9 @@ void print_help() {
               << "Native macOS ground receiver tooling for OpenIPC/WFB-NG links.\n\n"
               << "Usage:\n"
               << "  fpv4mac doctor [--json] [--no-claim]\n"
+              << "  fpv4mac capture --output FILE [--input FILE|-] [--passthrough]\n"
+              << "  fpv4mac inspect --input FILE\n"
+              << "  fpv4mac replay --input FILE [--speed max|realtime]\n"
               << "  fpv4mac --version\n\n"
               << "doctor safely enumerates compatible USB receivers and, by default,\n"
               << "claims and immediately releases interface 0 to prove readiness.\n";
@@ -76,8 +80,8 @@ void print_human(const fpv4mac::UsbProbeReport& report, const bool claim_interfa
         } else {
             std::cout << "Interface claim:      skipped\n";
         }
-        std::cout << "Radio initialization: pending devourer integration\n"
-                  << "Air frames received:  unavailable until receiver backend is integrated\n";
+        std::cout << "Radio initialization: available through scripts/radio-smoke-test.sh\n"
+                  << "Live receive:         available through scripts/receive.sh\n";
         if (!device.error.empty()) {
             std::cout << "Error:                " << device.error << '\n';
         }
@@ -119,6 +123,24 @@ void print_json(const fpv4mac::UsbProbeReport& report) {
 } // namespace
 
 int main(int argc, char* argv[]) {
+    if (argc > 1) {
+        try {
+            const std::string_view requested(argv[1]);
+            if (requested == "capture") {
+                return fpv4mac::run_capture_command(argc, argv);
+            }
+            if (requested == "inspect") {
+                return fpv4mac::run_inspect_command(argc, argv);
+            }
+            if (requested == "replay") {
+                return fpv4mac::run_replay_command(argc, argv);
+            }
+        } catch (const std::exception& error) {
+            std::cerr << "fpv4mac: " << error.what() << '\n';
+            return EXIT_FAILURE;
+        }
+    }
+
     bool json = false;
     bool claim_interface = true;
     std::string command = "doctor";
