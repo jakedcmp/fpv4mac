@@ -4,12 +4,12 @@
 
 ```mermaid
 flowchart LR
-    Air["WiFiLink 2 air unit"] -->|"WFB-NG / 5 GHz"| Adapter["RTL8812AU USB receiver"]
+    Air["OpenIPC/WFB-NG air unit<br/>WiFiLink2-G validated"] -->|"WFB-NG over Wi-Fi"| Adapter["supported USB receiver<br/>RTL8812AU validated"]
     Adapter --> Driver["devourer rxdemo<br/>GPL-2.0 process"]
     Driver -->|"rx.frame JSONL"| Capture["fpv4mac capture<br/>MIT process"]
     Capture --> Disk["versioned .fpv4cap"]
     Capture -->|"live JSONL passthrough"| WFB["fpv4mac-wfb + WFB-NG<br/>GPL-3.0 process"]
-    WFB -->|"unchanged UDP payloads"| RTP["RTP consumer on 127.0.0.1:5600"]
+    WFB -->|"unchanged UDP payloads + SDP/health"| RTP["RTP consumer on 127.0.0.1:5600"]
     RTP --> Consumers["FFmpeg / GStreamer / perception / dashboard gateway"]
 ```
 
@@ -17,6 +17,11 @@ The three processes are joined with pipes, which provides a stable interface and
 license boundaries. `devourer` owns the adapter. The MIT command records and replays radio frames.
 The GPL bridge performs WFB-NG authentication, decryption, deduplication, and FEC recovery before
 forwarding the original payload as UDP. No stage decodes or transcodes video.
+
+In automatic mode, the WFB bridge derives bounded candidate channel IDs from the WFB source
+address convention. A candidate becomes active only when WFB-NG authenticates its session using
+the supplied ground key. RTP inspection is metadata-only: it detects a strong H.264/H.265 marker,
+counts sequence gaps, and writes SDP without modifying media packets.
 
 ## Rules
 

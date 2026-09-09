@@ -2,8 +2,9 @@
 
 Native macOS ground receiver tooling for OpenIPC and WFB-NG video links.
 
-> **Project status:** pre-alpha hardware bring-up. USB discovery, raw-radio capture/replay, and a
-> macOS WFB-NG-to-UDP bridge are implemented. Live WiFiLink video validation remains.
+> **Project status:** pre-alpha, live-hardware validated. USB discovery, raw-radio capture/replay,
+> authenticated WFB-NG recovery, RTP forwarding, automatic link/codec detection, SDP generation,
+> and live health output work on the validated reference setup.
 
 ## Purpose
 
@@ -22,14 +23,17 @@ flowchart LR
 The project deliberately stops at the RTP boundary. Camera decoding, object detection, user
 interfaces, and mission logic belong in downstream applications.
 
-## Current hardware target
+## Hardware scope
 
-- Realtek RTL8812AU (`0bda:8812`)
-- Apple Silicon macOS
-- RunCam WiFiLink 2 / OpenIPC WFB-NG transmitters
+The validated reference setup is Apple Silicon macOS, the RunCam WiFiLink2-G air unit, and its
+RTL8812AU (`0bda:8812`) USB receiver. The architecture is not RunCam-specific: the boundary is an
+authenticated WFB-NG session carrying RTP, and the radio backend comes from OpenIPC `devourer`.
 
 The receiver backend will use [OpenIPC devourer](https://github.com/OpenIPC/devourer), the
 project's cross-platform userspace Realtek driver, instead of introducing a macOS kernel driver.
+See the [hardware compatibility matrix](docs/hardware-compatibility.md) for validated hardware,
+same-chip candidates, and broader upstream targets. “Supported by devourer” and “validated by
+fpv4mac” are intentionally kept separate.
 
 ## Build
 
@@ -79,9 +83,9 @@ scripts/build-devourer.sh
 scripts/radio-smoke-test.sh 161
 ```
 
-This initializes the RTL8812AU and counts raw frames on the selected channel. It does not yet
-recover or output video. Stop it before running `doctor`, because exactly one process can own the
-USB receiver.
+This initializes the RTL8812AU and counts raw frames on the selected channel. It does not recover
+or output video; use the live receive pipeline below for that. Stop it before running `doctor`,
+because exactly one process can own the USB receiver.
 
 ## Capture and replay
 
@@ -114,7 +118,14 @@ scripts/receive.sh \
 ```
 
 The pipeline always records raw RF frames, authenticates/decrypts WFB-NG, performs its upstream
-FEC recovery, and forwards the reconstructed RTP datagrams unchanged to UDP port 5600.
+FEC recovery, and forwards the reconstructed RTP datagrams unchanged to UDP port 5600. It derives
+the WFB link ID and radio port from candidate frames, but accepts a candidate only after `gs.key`
+authenticates its session. Once it sees a strong H.264/H.265 RTP marker, it writes
+`bench.sdp` beside the capture and emits a `media.detected` JSON event.
+
+Periodic `wfb.health` JSON events report whether the receiver is waiting for radio traffic,
+waiting for an authenticated session, receiving media, or stalled. Use an explicit
+`--link-id ID --radio-port PORT` when automatic discovery is not desired.
 
 ## Direction
 
@@ -122,10 +133,11 @@ FEC recovery, and forwards the reconstructed RTP datagrams unchanged to UDP port
 2. `devourer` monitor-mode receive on a configured channel
 3. Versioned raw-frame capture and deterministic replay
 4. WFB-NG session authentication, decryption, FEC recovery, and UDP forwarding
-5. Link-health JSON output and repeatable packet-capture fixtures
+5. Automatic authenticated link discovery, media SDP, live health, and repeatable fixtures
 6. Signed/notarized Apple Silicon releases
 
 See [the architecture](docs/architecture.md), [receiver contract](docs/receiver-contract.md),
+[hardware compatibility](docs/hardware-compatibility.md),
 [hardware validation](docs/hardware-validation.md), and [roadmap](docs/roadmap.md).
 
 ## License

@@ -28,15 +28,17 @@
 ## Milestone 3 — RTP forwarding
 
 - [x] Forward reconstructed RTP to configurable UDP destination
-- [ ] Detect H.264/H.265 payloads
+- [x] Discover link ID/radio port and require session authentication before selection
+- [x] Detect H.264/H.265 payloads and generate SDP
 - [x] Publish end-of-session WFB loss/FEC/decrypt and capture-drop metrics
-- [ ] Publish periodic live link-health events
-- [ ] Validate with FFmpeg, GStreamer, and a computer-vision consumer
+- [x] Publish periodic live link-health events
+- [x] Validate live H.265 RTP with FFmpeg on the reference hardware
+- [ ] Validate with GStreamer and a computer-vision consumer
 
 ## Milestone 4 — distribution
 
 - [ ] Universal or Apple Silicon release packaging
 - [ ] Code signing and notarization
 - [ ] Homebrew formula
-- [ ] Hardware compatibility matrix
+- [x] Hardware compatibility matrix with explicit validation tiers
 - [ ] OpenIPC contribution and maintainer feedback

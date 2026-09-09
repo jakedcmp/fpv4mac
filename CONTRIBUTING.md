@@ -19,5 +19,8 @@ WFB-NG belongs in the GPL-3.0 helper; keep the MIT/GPL process boundary describe
 `docs/architecture.md` intact.
 
 Bug reports involving USB hardware should include macOS version, Mac architecture, USB vendor and
-product IDs, adapter model, connection topology, and `fpv4mac doctor --json` output. Do not attach
-private `gs.key` files.
+product IDs, adapter model, connection topology, and `fpv4mac doctor --json` output. Air-unit
+reports should also identify the transmitter, firmware, channel/width, codec, and sanitized
+`wfb.health`/`wfb.complete` events. See the
+[hardware compatibility guide](docs/hardware-compatibility.md). Do not attach private `gs.key`
+files or raw captures that may contain sensitive radio traffic.

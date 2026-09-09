@@ -20,9 +20,29 @@ Results:
 4. The receiver delivered an ambient 802.11 frame before the WiFiLink2 air unit was powered.
 5. Ctrl-C shut the radio down and released the USB interface cleanly.
 
-This validates the Mac-to-USB-to-radio receive path. Deterministic fixtures separately validate
-WFB-NG session authentication, decryption, dropped-fragment FEC recovery, and UDP forwarding. It
-does **not** yet validate the WiFiLink2 transmitter or playable live RTP video.
+This validated the Mac-to-USB-to-radio receive path. Deterministic fixtures separately validate
+WFB-NG session authentication, decryption, dropped-fragment FEC recovery, and UDP forwarding.
+
+## 2026-09-08 — powered WiFiLink2 and live video
+
+Using the same Mac and receiver, a powered WiFiLink2-G produced an authenticated WFB-NG session
+on channel 161. The receiver reconstructed and forwarded H.265 RTP payload type 97. A live sample
+was identified as 1280×720 at 120 fps at roughly 4.1 Mbps, and was decoded on macOS. The raw-radio
+capture contained 36,823 frames over 48.9 seconds with no capture-queue drops, allowing the radio
+and WFB path to be reproduced later without hardware.
+
+## 2026-09-09 — automatic discovery and media description
+
+Replaying that saved capture through version 0.3.0:
+
+1. Derived link ID `0x7505d6` and radio port `0` from candidate WFB source addresses.
+2. Selected the link only after its session authenticated with the matching ground key.
+3. Recovered 24,271 RTP datagrams, including seven FEC recoveries.
+4. Detected H.265 payload type 97 and generated a valid local SDP file.
+5. Emitted a final `receiving` health snapshot and complete counters.
+
+These figures describe one bench capture rather than a general performance guarantee. The raw
+capture and ground key remain private and are not repository fixtures.
 
 ## Repeat the raw-radio test
 

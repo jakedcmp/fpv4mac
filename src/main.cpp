@@ -9,7 +9,7 @@
 
 namespace {
 
-constexpr std::string_view version = "0.2.0";
+constexpr std::string_view version = "0.3.0";
 
 std::string json_escape(const std::string& input) {
     std::string output;

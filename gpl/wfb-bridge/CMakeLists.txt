@@ -36,6 +36,7 @@ target_link_libraries(wfb_ng_aggregator PUBLIC PkgConfig::SODIUM ${PCAP_LIBRARY}
 
 add_executable(fpv4mac-wfb
     main.cpp
+    protocol.cpp
     ../../src/devourer_json.cpp
     ../../src/radio_frame.cpp
 )
@@ -45,6 +46,14 @@ target_compile_options(fpv4mac-wfb PRIVATE -Wall -Wextra -Wpedantic)
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(wfb_bridge_protocol_test
+        protocol_test.cpp
+        protocol.cpp
+    )
+    target_include_directories(wfb_bridge_protocol_test PRIVATE ../../include)
+    target_compile_options(wfb_bridge_protocol_test PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME wfb_bridge_protocol_test COMMAND wfb_bridge_protocol_test)
+
     add_executable(wfb_bridge_integration_test
         integration_test.cpp
         ../../src/devourer_json.cpp
