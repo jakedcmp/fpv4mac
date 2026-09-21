@@ -88,6 +88,7 @@ struct RuntimeState {
     std::atomic<std::uint64_t> rtp_sequence_gaps{};
     std::atomic<std::uint64_t> last_wifi_ms{};
     std::atomic<std::uint64_t> last_udp_ms{};
+    std::atomic<std::uint64_t> last_rtp_ms{};
     std::atomic<std::uint32_t> channel_id{};
     std::atomic<std::uint32_t> link_id{};
     std::atomic<std::uint16_t> payload_type{256};
@@ -294,7 +295,11 @@ public:
 
 protected:
     void send_to_socket(const std::uint8_t* payload, const std::uint16_t packet_size) override {
+        const auto previous_rtp_packets = rtp_.packet_count();
         const auto detected = rtp_.observe({payload, packet_size});
+        if (rtp_.packet_count() > previous_rtp_packets) {
+            state_.last_rtp_ms.store(elapsed_ms(started_));
+        }
         if (rtp_.payload_type()) {
             state_.payload_type.store(*rtp_.payload_type());
         }
@@ -374,24 +379,19 @@ void emit_health(const RuntimeState& state,
     const auto wifi_frames = state.wifi_frames.load();
     const auto sessions = state.authenticated_sessions.load();
     const auto udp_packets = state.udp_packets.load();
+    const auto rtp_packets = state.rtp_packets.load();
     const auto last_wifi = state.last_wifi_ms.load();
     const auto last_udp = state.last_udp_ms.load();
-    std::string_view phase = "waiting_radio";
-    if (wifi_frames > 0) {
-        phase = "waiting_session";
-    }
-    if (sessions > 0) {
-        phase = "authenticated";
-    }
-    if (udp_packets > 0) {
-        phase = age_ms(now, last_udp) <= 3000 ? "receiving" : "stalled";
-    }
+    const auto last_rtp = state.last_rtp_ms.load();
+    const auto rtp_age = rtp_packets > 0 ? age_ms(now, last_rtp) : 0;
+    const auto phase = fpv4mac::wfb::health_phase(wifi_frames, sessions, rtp_packets, rtp_age);
 
     const auto codec = state.codec.load();
     const auto payload_type = state.payload_type.load();
     const auto payload_type_text = payload_type <= 127 ? std::to_string(payload_type) : "null";
     const auto wifi_age_text = wifi_frames > 0 ? std::to_string(age_ms(now, last_wifi)) : "null";
     const auto udp_age_text = udp_packets > 0 ? std::to_string(age_ms(now, last_udp)) : "null";
+    const auto rtp_age_text = rtp_packets > 0 ? std::to_string(rtp_age) : "null";
     char event[1024];
     std::snprintf(
         event, sizeof(event),
@@ -403,7 +403,7 @@ void emit_health(const RuntimeState& state,
         "\"udp_send_errors\":%llu,"
         "\"rtp_packets\":%llu,\"rtp_bytes\":%llu,\"rtp_sequence_gaps\":%llu,"
         "\"codec\":\"%.*s\",\"payload_type\":%s,"
-        "\"last_wifi_age_ms\":%s,\"last_udp_age_ms\":%s}",
+        "\"last_wifi_age_ms\":%s,\"last_udp_age_ms\":%s,\"last_rtp_age_ms\":%s}",
         static_cast<int>(phase.size()), phase.data(), static_cast<unsigned long long>(now),
         state.link_selected.load() ? "true" : "false", state.channel_id.load(),
         state.link_id.load(), state.radio_port.load(), static_cast<unsigned long long>(wifi_frames),
@@ -420,7 +420,8 @@ void emit_health(const RuntimeState& state,
         static_cast<unsigned long long>(state.rtp_sequence_gaps.load()),
         static_cast<int>(fpv4mac::wfb::video_codec_name(codec).size()),
         fpv4mac::wfb::video_codec_name(codec).data(),
-        payload_type_text.c_str(), wifi_age_text.c_str(), udp_age_text.c_str());
+        payload_type_text.c_str(), wifi_age_text.c_str(), udp_age_text.c_str(),
+        rtp_age_text.c_str());
     emit_json(event);
 }
 
@@ -529,6 +530,11 @@ int main(int argc, char* argv[]) {
 
             ++state.wifi_frames;
             state.last_wifi_ms.store(elapsed_ms(started));
+            if (!options.link_id && !fpv4mac::wfb::candidate_matches_radio_port(
+                                        *identity, options.radio_port)) {
+                ++state.filtered;
+                continue;
+            }
             if (selected) {
                 if (!options.accept_any_channel_id &&
                     identity->channel_id != selected->channel_id()) {

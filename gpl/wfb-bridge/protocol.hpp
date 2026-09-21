@@ -22,6 +22,14 @@ struct ChannelIdentity {
 std::optional<ChannelIdentity> channel_identity_from_source(
     const std::array<std::uint8_t, 6>& source_address);
 
+[[nodiscard]] bool candidate_matches_radio_port(const ChannelIdentity& identity,
+                                                std::uint8_t configured_radio_port);
+
+[[nodiscard]] std::string_view health_phase(std::uint64_t wifi_frames,
+                                            std::uint64_t authenticated_sessions,
+                                            std::uint64_t rtp_packets,
+                                            std::uint64_t last_rtp_age_ms);
+
 enum class VideoCodec : std::uint8_t {
     unknown = 0,
     h264,

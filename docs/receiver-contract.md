@@ -1,6 +1,6 @@
 # Receiver contract
 
-This document defines the implemented receiver boundary for version 0.3.0.
+This document defines the implemented receiver boundary for version 0.3.1.
 
 ## Configuration input
 
@@ -31,9 +31,11 @@ scripts/receive.sh \
 ```
 
 Automatic link selection extracts candidate channel identities only from WFB-formatted source
-addresses. It keeps a bounded candidate set and selects a link only after WFB-NG successfully
-authenticates a session with the configured key. `--link-id ID --radio-port PORT` selects an
-explicit identity instead; decimal and `0x` hexadecimal link IDs are accepted.
+addresses and constrains them to the configured `--radio-port` (video defaults to port `0`). It
+keeps a bounded candidate set and selects a link only after WFB-NG successfully authenticates a
+session with the configured key. This prevents an authenticated auxiliary port from winning the
+discovery race before video. `--link-id ID --radio-port PORT` selects an explicit identity
+instead; decimal and `0x` hexadecimal link IDs are accepted.
 
 ## Media output
 
@@ -77,12 +79,15 @@ error. A representative health event is:
   "codec": "H265",
   "payload_type": 97,
   "last_wifi_age_ms": 0,
-  "last_udp_age_ms": 0
+  "last_udp_age_ms": 0,
+  "last_rtp_age_ms": 0
 }
 ```
 
 States progress from `waiting_radio` to `waiting_session`, then `authenticated` and `receiving`.
-After media has flowed, more than three seconds without an outgoing packet reports `stalled`.
+`receiving` requires valid RTP packets; authenticated zero-byte or non-RTP traffic does not count
+as live media. After RTP has flowed, more than three seconds without another RTP packet reports
+`stalled`. `last_rtp_age_ms` exposes the media-specific freshness measurement.
 Counters are cumulative for the process. `wfb.complete` adds filtered/malformed frame and bounded
 candidate-drop counts. Field names remain pre-stable until the first stable release.
 

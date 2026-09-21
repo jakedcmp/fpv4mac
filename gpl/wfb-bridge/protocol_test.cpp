@@ -46,6 +46,13 @@ int main() {
     require(identity->channel_id == 0x7505d600, "channel ID was decoded incorrectly");
     require(identity->link_id == 0x7505d6, "link ID was decoded incorrectly");
     require(identity->radio_port == 0, "radio port was decoded incorrectly");
+    require(fpv4mac::wfb::candidate_matches_radio_port(*identity, 0),
+            "video radio port was rejected");
+    const auto auxiliary_identity = fpv4mac::wfb::channel_identity_from_source(
+        std::array<std::uint8_t, 6>{0x57, 0x42, 0x75, 0x05, 0xd6, 0x20});
+    require(auxiliary_identity.has_value(), "auxiliary WFB source address was not recognized");
+    require(!fpv4mac::wfb::candidate_matches_radio_port(*auxiliary_identity, 0),
+            "radio port 32 was accepted before configured video port 0");
     require(!fpv4mac::wfb::channel_identity_from_source(
                  std::array<std::uint8_t, 6>{0, 1, 2, 3, 4, 5}),
             "non-WFB source address was accepted");
@@ -73,6 +80,17 @@ int main() {
         0x90, 0x61, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2};
     require(!fpv4mac::wfb::inspect_rtp_packet(bad_extension),
             "truncated RTP extension was accepted");
+
+    require(fpv4mac::wfb::health_phase(0, 0, 0, 0) == "waiting_radio",
+            "zero frames should report waiting_radio");
+    require(fpv4mac::wfb::health_phase(2, 0, 0, 0) == "waiting_session",
+            "radio frames without authentication should report waiting_session");
+    require(fpv4mac::wfb::health_phase(2, 1, 0, 0) == "authenticated",
+            "zero-byte UDP traffic must not report receiving");
+    require(fpv4mac::wfb::health_phase(2, 1, 1, 100) == "receiving",
+            "recent RTP should report receiving");
+    require(fpv4mac::wfb::health_phase(2, 1, 1, 3001) == "stalled",
+            "stale RTP should report stalled");
 
     const auto sdp = fpv4mac::wfb::make_video_sdp("127.0.0.1", 5600, 97,
                                                   fpv4mac::wfb::VideoCodec::h265);

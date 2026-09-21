@@ -44,6 +44,18 @@ Replaying that saved capture through version 0.3.0:
 These figures describe one bench capture rather than a general performance guarantee. The raw
 capture and ground key remain private and are not repository fixtures.
 
+## 2026-09-21 — cold-start discovery regression
+
+With the receiver already listening and the WiFiLink2-G initially unpowered, the air unit was
+powered after roughly 83 seconds. Raw frames and an authenticated session appeared immediately,
+confirming that receiver-first startup does not require a radio restart on the validated setup.
+
+The run also reproduced a discovery race: authenticated auxiliary radio port `32` arrived before
+video port `0`. Version 0.3.0 selected port `32`, emitted zero-byte UDP datagrams, and incorrectly
+reported `receiving` despite zero RTP packets and an unknown codec. Version 0.3.1 constrains
+automatic discovery to the configured radio port and derives live/stalled media state from RTP
+freshness instead of UDP packet count.
+
 ## Repeat the raw-radio test
 
 ```bash

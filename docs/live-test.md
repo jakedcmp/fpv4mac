@@ -6,8 +6,9 @@
 2. Confirm the BEC output voltage and polarity with a multimeter.
 3. Keep the propellers removed and use the smoke stopper for the first energization.
 4. Obtain the matching WFB-NG `gs.key`; do not commit or paste it into logs.
-5. Confirm the configured channel and width. Link ID and radio port default to authenticated
-   automatic discovery, but explicit values remain available for diagnosis.
+5. Confirm the configured channel, width, and radio port. Link ID defaults to authenticated
+   automatic discovery constrained to the configured radio port (`0` for the reference video
+   stream), while an explicit link ID remains available for diagnosis.
 
 ## Start the Mac receiver
 

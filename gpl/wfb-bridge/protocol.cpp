@@ -51,6 +51,27 @@ std::optional<ChannelIdentity> channel_identity_from_source(
     };
 }
 
+bool candidate_matches_radio_port(const ChannelIdentity& identity,
+                                  const std::uint8_t configured_radio_port) {
+    return identity.radio_port == configured_radio_port;
+}
+
+std::string_view health_phase(const std::uint64_t wifi_frames,
+                              const std::uint64_t authenticated_sessions,
+                              const std::uint64_t rtp_packets,
+                              const std::uint64_t last_rtp_age_ms) {
+    if (wifi_frames == 0) {
+        return "waiting_radio";
+    }
+    if (authenticated_sessions == 0) {
+        return "waiting_session";
+    }
+    if (rtp_packets == 0) {
+        return "authenticated";
+    }
+    return last_rtp_age_ms <= 3000 ? "receiving" : "stalled";
+}
+
 std::string_view video_codec_name(const VideoCodec codec) {
     switch (codec) {
     case VideoCodec::h264:

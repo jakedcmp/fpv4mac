@@ -119,8 +119,9 @@ scripts/receive.sh \
 
 The pipeline always records raw RF frames, authenticates/decrypts WFB-NG, performs its upstream
 FEC recovery, and forwards the reconstructed RTP datagrams unchanged to UDP port 5600. It derives
-the WFB link ID and radio port from candidate frames, but accepts a candidate only after `gs.key`
-authenticates its session. Once it sees a strong H.264/H.265 RTP marker, it writes
+the WFB link ID from candidate frames on the configured radio port (video defaults to port `0`),
+but accepts a candidate only after `gs.key` authenticates its session. Once it sees a strong
+H.264/H.265 RTP marker, it writes
 `bench.sdp` beside the capture and emits a `media.detected` JSON event.
 
 Periodic `wfb.health` JSON events report whether the receiver is waiting for radio traffic,
