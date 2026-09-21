@@ -42,3 +42,11 @@ ffplay -protocol_whitelist file,udp,rtp captures/wifilink-first-power.sdp
 
 If steps 3–5 fail, preserve the `.fpv4cap` file. It allows inspection and replay without keeping
 the air unit powered.
+
+## Power-cycle recovery check
+
+After establishing live RTP, leave the receiver running and power the air unit off. Health should
+report `stalled` after three seconds without RTP. Power the air unit back on without restarting
+the receiver; the same process should authenticate the new session and return to `receiving`.
+Record any decrypt errors, RTP sequence gaps, packet loss, or UDP send errors observed after
+recovery.

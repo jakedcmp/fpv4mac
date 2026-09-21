@@ -56,6 +56,13 @@ reported `receiving` despite zero RTP packets and an unknown codec. Version 0.3.
 automatic discovery to the configured radio port and derives live/stalled media state from RTP
 freshness instead of UDP packet count.
 
+The same version 0.3.1 process was then kept running while the air unit was power-cycled. Health
+changed from `receiving` to `stalled` once the last RTP packet was more than three seconds old.
+After roughly 22 seconds without media, the repowered air unit supplied a new authenticated
+session and health returned to `receiving` without restarting the USB receiver or application.
+RTP counters resumed with zero sequence gaps, packet loss, decrypt errors, or UDP send errors;
+FEC recovery also continued across the interruption.
+
 ## Repeat the raw-radio test
 
 ```bash
